@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+package manifest;
+
+service PluginService {
+  rpc GetManifest (GetManifestRequest) returns (GetManifestResponse);
+  rpc FuncCall (FuncCallRequest) returns (FuncCallResponse);
+}
+
+message ArgumentList {
+  repeated Argument items = 1;
+}
+
+message Argument {
+  oneof value {
+    string str_value = 1;
+    int64 int_value = 2;
+    double double_value = 3;
+    bool bool_value = 4;
+    ArgumentList list_value = 5;
+    string json_data = 6;
+  }
+}
+
+message FuncCallRequest {
+  string func_name = 1;
+  repeated Argument args = 2;
+}
+
+message FuncCallResponse {
+  oneof value {
+    string str_value = 1;
+    int64 int_value = 2;
+    double double_value = 3;
+    bool bool_value = 4;
+    string json_data = 5;
+  }
+}
+
+message GetManifestRequest {
+  string plugin_name = 1;
+}
+
+message GetManifestResponse {
+  string json_data = 1;
+}
