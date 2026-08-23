@@ -1,4 +1,5 @@
 import inspect
+import json
 from pathlib import Path
 
 from pydantic import BaseModel, Field
@@ -40,7 +41,7 @@ class ContainsOutput(BaseModel):
 class PluginManager:
     """String operations plugin manager with static methods and self-manifest generation."""
 
-    def get_manifest(self) -> dict: # TODO add value return
+    def get_manifest(self) -> str: # TODO add value return
         """Dynamically inspects the class to generate the manifest for all public static methods."""
         excluded = {"get_manifest"}
         functions_manifest = {}
@@ -70,10 +71,11 @@ class PluginManager:
 
             functions_manifest[name] = params
 
-        return {
+        manifest_schema = {
             "plugin_name": plugin_name,
             "functions": functions_manifest,
         }
+        return json.dumps(manifest_schema, indent=1)
 
     @staticmethod
     def ping() -> str:

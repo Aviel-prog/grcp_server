@@ -1,4 +1,5 @@
 import inspect
+import json
 from pathlib import Path
 
 from pydantic import BaseModel, Field, field_validator
@@ -49,7 +50,7 @@ class DivInput(BaseModel):
 class PluginManager:
     """Math operations plugin manager with static methods and Pydantic input models."""
 
-    def get_manifest(self) -> dict: # TODO add value return
+    def get_manifest(self) -> str: # TODO add value return
         """Dynamically inspects class static methods to generate the manifest."""
         excluded = {"get_manifest"}
         functions_manifest = {}
@@ -79,10 +80,11 @@ class PluginManager:
 
             functions_manifest[name] = params
 
-        return {
+        manifest_schema = {
             "plugin_name": plugin_name,
             "functions": functions_manifest,
         }
+        return json.dumps(manifest_schema, indent=1)
 
     @staticmethod
     def ping() -> str:
