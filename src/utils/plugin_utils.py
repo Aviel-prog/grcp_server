@@ -30,10 +30,17 @@ def import_plugin_manager(plugin_filename: str):
     return module.PluginManager
 
 
+
 def build_registered_functions(plugin_instance) -> dict:
+    """אוסף גם methods רגילות וגם staticmethods, ניגש דרך ה-instance
+    כדי שקריאה בפועל (func(*args)) תעבוד זהה בשני המקרים."""
     excluded = {"get_manifest"}
-    return {
-        name: method
-        for name, method in inspect.getmembers(plugin_instance, predicate=inspect.ismethod)
-        if not name.startswith("_") and name not in excluded
-    }
+    plugin_cls = type(plugin_instance)
+
+    registered = {}
+    for name, _ in inspect.getmembers(plugin_cls, predicate=inspect.isfunction):
+        if name.startswith("_") or name in excluded:
+            continue
+        registered[name] = getattr(plugin_instance, name)
+
+    return registered

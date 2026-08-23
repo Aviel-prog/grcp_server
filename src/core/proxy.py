@@ -1,6 +1,5 @@
 import grpc
 
-from src.core.engine import Loader
 from src.genereted import engine_pb2, engine_pb2_grpc
 from src.utils.proto_utils import value_to_argument, read_response
 

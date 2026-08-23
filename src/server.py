@@ -38,6 +38,7 @@ def run_plugin_server(plugin_filename: str, host: str, port: int):
     plugin_manager_cls = import_plugin_manager(plugin_filename)
     plugin_instance = plugin_manager_cls()
     registered_functions = build_registered_functions(plugin_instance)
+    print(f"[{plugin_filename}] registered: {list(registered_functions.keys())}", flush=True)
 
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     engine_pb2_grpc.add_PluginServiceServicer_to_server(
