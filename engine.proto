@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package manifest;
 
+// A single plugin process exposes exactly one PluginService instance,
+// describing and executing the functions of the plugin it was loaded with.
 service PluginService {
   rpc GetManifest (GetManifestRequest) returns (GetManifestResponse);
   rpc FuncCall (FuncCallRequest) returns (FuncCallResponse);
@@ -18,7 +20,7 @@ message Argument {
     double double_value = 3;
     bool bool_value = 4;
     ArgumentList list_value = 5;
-    string json_data = 6;
+    string json_data = 6; // fallback for dicts / arbitrary structures
   }
 }
 
@@ -37,10 +39,15 @@ message FuncCallResponse {
   }
 }
 
+// NOTE: a plugin process always serves a single, pre-determined plugin
+// (there is no more central broker/registry routing by name), so
+// `plugin_name` is currently unused by both client and server. Left in
+// place as a reserved field rather than removed, since dropping it would
+// require regenerating engine_pb2.py/engine_pb2_grpc.py (protoc) again.
+// Remove it the next time the proto is regenerated.
 message GetManifestRequest {
   string plugin_name = 1;
 }
-
 message GetManifestResponse {
   string json_data = 1;
 }

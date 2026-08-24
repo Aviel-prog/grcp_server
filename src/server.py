@@ -2,7 +2,7 @@ import json
 from concurrent import futures
 import grpc
 
-from src.genereted import engine_pb2_grpc, engine_pb2
+from src.generated import engine_pb2_grpc, engine_pb2
 from src.utils.plugin_utils import import_plugin_manager, build_registered_functions
 from src.utils.proto_utils import argument_to_value, build_response
 

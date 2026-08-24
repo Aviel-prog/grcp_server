@@ -1,69 +1,114 @@
+"""Client-side facade for calling a loaded plugin's functions as if they
+were local, transparently forwarding attribute access to gRPC calls.
+"""
+
+import json
+import logging
+from typing import Any
+
 import grpc
 
-from src.genereted import engine_pb2, engine_pb2_grpc
-from src.utils.proto_utils import value_to_argument, read_response
+from src.generated import engine_pb2, engine_pb2_grpc
+from src.utils.proto_utils import read_response, value_to_argument
+
+logger = logging.getLogger(__name__)
+
+
+class PluginCallError(Exception):
+    """Raised when a plugin function call fails: unknown function, argument
+    mismatch, or a transport-level gRPC failure."""
 
 
 class _Proxy:
+    """Owns the gRPC channel to a single running plugin server and exposes
+    the low-level operations `ProxyWrapper` needs: manifest retrieval,
+    argument validation, and remote function invocation.
+
+    The channel is opened once (not per-call) and must be closed via
+    `close()` when the proxy is no longer needed.
+    """
+
     def __init__(self, host: str, port: int):
-        self.host = host
-        self.port = port
+        self._channel = grpc.insecure_channel(f"{host}:{port}")
+        self._stub = engine_pb2_grpc.PluginServiceStub(self._channel)
+        self._manifest: dict | None = None
 
-    def is_exist(self, called_func):
+    def close(self) -> None:
+        self._channel.close()
+
+    def manifest(self) -> dict:
+        """Returns the plugin's manifest (function names, parameters,
+        return types), fetched once from the server and cached."""
+        if self._manifest is None:
+            response = self._stub.GetManifest(engine_pb2.GetManifestRequest())
+            self._manifest = json.loads(response.json_data)
+        return self._manifest
+
+    def is_exist(self, function_name: str) -> bool:
+        """Checks whether `function_name` is exposed by the plugin."""
+        try:
+            return function_name in self.manifest().get("functions", {})
+        except grpc.RpcError:
+            logger.error("Could not reach plugin server to resolve '%s'", function_name)
+            return False
+
+    def validate_args(self, function_name: str, *args: Any) -> None:
         return True  # TODO
 
-    def execute_grcp_request(self, called_func, *args, **kwargs):
-        with grpc.insecure_channel(f'{self.host}:{self.port}') as channel:
-            stub = engine_pb2_grpc.PluginServiceStub(channel)
-            request = engine_pb2.FuncCallRequest(
-                func_name=called_func,
-                args=[value_to_argument(a) for a in args]
-            )
-            try:
-                response = stub.FuncCall(request)
-                return read_response(response)
-            except grpc.RpcError as exc:
-                print(f"gRPC call failed: {exc.code()} - {exc.details()}")
-                return None
-
-    def get_manifest(self, plugin_filename: str):
-        with grpc.insecure_channel(f'{self.host}:{self.port}') as channel:
-            stub = engine_pb2_grpc.PluginServiceStub(channel)
-            request = engine_pb2.GetManifestRequest(plugin_name=plugin_filename)
-            try:
-                response = stub.GetManifest(request)
-                return response.json_data
-            except grpc.RpcError as exc:
-                print(f"gRPC call failed: {exc.code()} - {exc.details()}")
-                return None
-
-    def validate_args(self, *args, **kwargs):
-
+    def validate_output(self, response) -> None:
         return True  # TODO
 
-    def validate_output(self, response):
-        return True  # TODO
+    def call(self, function_name: str, *args: Any) -> Any:
+        """Invokes `function_name` on the remote plugin and returns its
+        result."""
+        request = engine_pb2.FuncCallRequest(
+            func_name=function_name,
+            args=[value_to_argument(arg) for arg in args],
+        )
+
+        try:
+            response = self._stub.FuncCall(request)
+        except grpc.RpcError as exc:
+            raise PluginCallError(f"{exc.code()}: {exc.details()}") from exc
+
+        return read_response(response)
 
 
 class ProxyWrapper:
-    def __init__(self, wrapped_proxy):
-        self._wrapped_proxy = wrapped_proxy
+    """Presents a `_Proxy` as if its remote functions were local attributes:
+    `wrapper.add(1, 2)` transparently performs a `FuncCall` RPC.
+    """
 
-    def __getattribute__(self, item):
-        wrapped_proxy = object.__getattribute__(self, "_wrapped_proxy")
+    def __init__(self, proxy: _Proxy):
+        # Bypasses __setattr__/__getattr__ entirely for this one internal
+        # attribute so it never gets mistaken for a remote function name.
+        object.__setattr__(self, "_proxy", proxy)
 
-        if hasattr(wrapped_proxy, item):
-            return getattr(wrapped_proxy, item)
+    def __getattr__(self, function_name: str):
+        # __getattr__ (unlike __getattribute__) only fires for attributes
+        # that don't already exist on the instance/class, so dunder lookups
+        # (__class__, __repr__, pickling hooks, ...) never trigger a
+        # manifest RPC - only genuinely-missing names reach here.
+        proxy: _Proxy = object.__getattribute__(self, "_proxy")
 
-        if wrapped_proxy.is_exist(item):
-            def wrapper(*args, **kwargs):
-                if wrapped_proxy.validate_args(item, *args, **kwargs):
-                    response = wrapped_proxy.execute_grcp_request(item, *args, **kwargs)
-                    if wrapped_proxy.validate_output(response):
-                        return response
-                    raise ValueError("Invalid output")
+        if not proxy.is_exist(function_name):
+            raise AttributeError(f"'{function_name}' is not exposed by this plugin")
+
+        def call_remote(*args: Any, **kwargs: Any) -> Any:
+            if kwargs:
+                raise PluginCallError(
+                    "Keyword arguments are not supported by plugin calls; use positional arguments"
+                )
+            if proxy.validate_args(function_name, *args):
+                response = proxy.call(function_name, *args)
+                if proxy.validate_output(response):
+                    return response
+                raise ValueError("Invalid output of the plugin")
+
+            else:
                 raise ValueError("Invalid input")
 
-            return wrapper
+        return call_remote
 
-        raise AttributeError(f"'{item}' not found")
+    def close(self) -> None:
+        object.__getattribute__(self, "_proxy").close()

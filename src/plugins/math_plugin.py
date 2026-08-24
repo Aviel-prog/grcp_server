@@ -52,7 +52,6 @@ class PluginManager:
 
     def get_manifest(self) -> str: # TODO add value return
         """Dynamically inspects class static methods to generate the manifest."""
-        excluded = {"get_manifest"}
         functions_manifest = {}
         try:
             plugin_name = Path(__file__).stem
@@ -61,7 +60,7 @@ class PluginManager:
 
         # Use inspect.isfunction to capture staticmethods on class
         for name, method in inspect.getmembers(self.__class__, predicate=inspect.isfunction):
-            if name.startswith("_") or name in excluded:
+            if name.startswith("_"):
                 continue
 
             sig = inspect.signature(method)

@@ -1,0 +1,86 @@
+@startuml
+skinparam componentStyle uml2
+skinparam classAttributeIconSize 0
+
+package "Pydantic Schemas & Manifest Models" {
+    abstract class BaseModel {
+        +model_dump() : dict
+        +model_dump_json() : str
+    }
+
+    class FunctionManifestSchema {
+        +parameters : Map<String, String>
+        +return_type : String
+    }
+
+    class PluginManifestSchema {
+        +plugin_name : String
+        +functions : Map<String, FunctionManifestSchema>
+    }
+
+    abstract class BaseInputSchema {
+        ' Abstract schema for all function input parameters
+    }
+
+    abstract class BaseOutputSchema {
+        ' Abstract schema for all function return values
+    }
+
+    BaseModel <|-- PluginManifestSchema
+    BaseModel <|-- FunctionManifestSchema
+    BaseModel <|-- BaseInputSchema
+    BaseModel <|-- BaseOutputSchema
+    PluginManifestSchema *-- FunctionManifestSchema
+}
+
+package "Generic Plugin Framework" {
+    interface IPlugin {
+        +get_manifest() : str
+        +{abstract} ping() : str
+    }
+
+    abstract class BasePlugin {
+        #EXCLUDED_METHODS : Set<String> = {"get_manifest"}
+        +get_manifest() : str
+        +{abstract} ping() : str
+    }
+
+    IPlugin <|.. BasePlugin
+
+    class ConcretePluginManager {
+        #EXCLUDED_METHODS : Set<String>
+        +{static} ping() : str
+        +{static} exported_action(input: ConcreteInputSchema) : ConcreteOutputSchema
+        -{static} internal_helper() : void
+    }
+
+    BasePlugin <|-- ConcretePluginManager
+}
+
+package "Python Reflection" {
+    class inspect {
+        +{static} getmembers()
+        +{static} signature()
+    }
+}
+
+' Relationships & Data Flow
+BasePlugin ..> inspect : introspects methods & signatures
+BasePlugin ..> PluginManifestSchema : builds & serializes to JSON via Pydantic
+ConcretePluginManager ..> BaseInputSchema : validates inputs
+ConcretePluginManager ..> BaseOutputSchema : validates outputs
+
+note top of BasePlugin
+  <b>תנאי 2 ו-3:</b>
+  - מממש את get_manifest וגורם למימוש ping.
+  - בונה אובייקט PluginManifestSchema (Pydantic) 
+    ומחזיר string באמצעות model_dump_json().
+end note
+
+note right of ConcretePluginManager
+  <b>תנאי 1:</b> כל פונקציה מעבירה קלטים ופלטים דרך סכמות Pydantic.
+  <b>תנאי 4:</b> החרגת פונקציות מתבצעת עפ"י החרגת פונקציות פרטיות (_),
+  החרגת get_manifest, או הגדרה מותאמת ב-EXCLUDED_METHODS.
+end note
+
+@enduml

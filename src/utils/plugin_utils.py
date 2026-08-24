@@ -7,12 +7,6 @@ import socket
 PLUGINS_DIR = "src/plugins"
 
 
-def find_free_port():
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.bind(('', 0))
-        return s.getsockname()[1]
-
-
 def import_plugin_manager(plugin_filename: str):
     """טוען דינמית קובץ plugins/<plugin_filename>.py ומחזיר את מחלקת PluginManager שבתוכו"""
     module_path = os.path.join(PLUGINS_DIR, f"{plugin_filename}.py")
