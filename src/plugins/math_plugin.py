@@ -1,6 +1,6 @@
 import inspect
-import json
 from pathlib import Path
+from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field, field_validator
 # ==========================================
 class PingOutput(BaseModel):
     response: str = Field()
+
 
 class AddInput(BaseModel):
     a: int | float = Field(description="First operand")
@@ -44,14 +45,25 @@ class DivInput(BaseModel):
 
 
 # ==========================================
+# Pydantic Schemas for Outputs
+# ==========================================
+class NumberOutput(BaseModel):
+    result: int | float = Field(description="Resulting numeric value")
+
+
+class ManifestOutput(BaseModel):
+    plugin_name: str = Field(description="Name of the plugin")
+    functions: dict[str, dict[str, Any]] = Field(description="Map of function names to parameter types")
+
+
+# ==========================================
 # Plugin Manager Implementation
 # ==========================================
-
 class PluginManager:
-    """Math operations plugin manager with static methods and Pydantic input models."""
+    """Math operations plugin manager with static methods and Pydantic input/output validation."""
 
-    def get_manifest(self) -> str: # TODO add value return
-        """Dynamically inspects class static methods to generate the manifest."""
+    def get_manifest(self) -> str:
+        """Dynamically inspects class methods to generate the manifest json."""
         functions_manifest = {}
         try:
             plugin_name = Path(__file__).stem
@@ -79,11 +91,11 @@ class PluginManager:
 
             functions_manifest[name] = params
 
-        manifest_schema = {
-            "plugin_name": plugin_name,
-            "functions": functions_manifest,
-        }
-        return json.dumps(manifest_schema, indent=1)
+        validated_output = ManifestOutput(
+            plugin_name=plugin_name,
+            functions=functions_manifest,
+        )
+        return validated_output.model_dump_json(indent=2)
 
     @staticmethod
     def ping() -> str:
@@ -92,31 +104,36 @@ class PluginManager:
 
     @staticmethod
     def add(a: int | float, b: int | float) -> int | float:
-        validated = AddInput(a=a, b=b)
-        return validated.a + validated.b
+        val_in = AddInput(a=a, b=b)
+        res = val_in.a + val_in.b
+        return NumberOutput(result=res).result
 
     @staticmethod
     def sub(a: int | float, b: int | float) -> int | float:
-        validated = SubInput(a=a, b=b)
-        return validated.a - validated.b
+        val_in = SubInput(a=a, b=b)
+        res = val_in.a - val_in.b
+        return NumberOutput(result=res).result
 
     @staticmethod
     def multiply(a: int | float, b: int | float) -> int | float:
-        validated = MultiplyInput(a=a, b=b)
-        return validated.a * validated.b
+        val_in = MultiplyInput(a=a, b=b)
+        res = val_in.a * val_in.b
+        return NumberOutput(result=res).result
 
     @staticmethod
     def pow(a: int | float, b: int | float) -> int | float:
-        validated = PowInput(a=a, b=b)
-        return validated.a ** validated.b
+        val_in = PowInput(a=a, b=b)
+        res = val_in.a ** val_in.b
+        return NumberOutput(result=res).result
 
     @staticmethod
     def div(a: int | float, b: int | float) -> int | float:
-        validated = DivInput(a=a, b=b)
-        return validated.a / validated.b
+        val_in = DivInput(a=a, b=b)
+        res = val_in.a / val_in.b
+        return NumberOutput(result=res).result
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     pw = PluginManager()
     print("Manifest:", pw.get_manifest())
     print("Add:", PluginManager.add(2, 3))

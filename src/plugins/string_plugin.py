@@ -1,6 +1,7 @@
 import inspect
-import json
+from email.policy import strict
 from pathlib import Path
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -9,7 +10,7 @@ from pydantic import BaseModel, Field
 # Pydantic Schemas for Validation
 # ==========================================
 
-class PingOutput(BaseModel):
+class PingOutput(BaseModel, strict):
     response: str = Field()
 
 
@@ -34,6 +35,11 @@ class ContainsOutput(BaseModel):
     contains: bool
 
 
+class ManifestOutput(BaseModel):
+    plugin_name: str = Field(description="Name of the plugin")
+    functions: dict[str, dict[str, Any]] = Field(description="Map of function names to parameter types")
+
+
 # ==========================================
 # Plugin Implementation
 # ==========================================
@@ -41,8 +47,8 @@ class ContainsOutput(BaseModel):
 class PluginManager:
     """String operations plugin manager with static methods and self-manifest generation."""
 
-    def get_manifest(self) -> str: # TODO add value return
-        """Dynamically inspects the class to generate the manifest for all public static methods."""
+    def get_manifest(self) -> str:
+        """Dynamically inspects the class to generate a validated JSON manifest string."""
         functions_manifest = {}
         try:
             plugin_name = Path(__file__).stem
@@ -70,11 +76,11 @@ class PluginManager:
 
             functions_manifest[name] = params
 
-        manifest_schema = {
-            "plugin_name": plugin_name,
-            "functions": functions_manifest,
-        }
-        return json.dumps(manifest_schema, indent=1)
+        validated_manifest = ManifestOutput(
+            plugin_name=plugin_name,
+            functions=functions_manifest,
+        )
+        return validated_manifest.model_dump_json(indent=1)
 
     @staticmethod
     def ping() -> str:
@@ -102,12 +108,12 @@ class PluginManager:
         return LengthOutput(length=len(val.text)).length
 
     @staticmethod
-    def contains(text: str, sub: str) -> bool:
+    def _contains(text: str, sub: str) -> bool:
         val = SubstringInput(text=text, sub=sub)
         return ContainsOutput(contains=val.sub in val.text).contains
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     pw = PluginManager()
     print("Manifest:", pw.get_manifest())
     print("ping:", PluginManager.ping())
