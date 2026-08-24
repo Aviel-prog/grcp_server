@@ -1,3 +1,4 @@
+"""Common abstract base classes and interfaces shared across all plugins."""
 from abc import ABC
 
 from pydantic import BaseModel, ConfigDict

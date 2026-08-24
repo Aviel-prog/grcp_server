@@ -1,6 +1,4 @@
-"""Client-side facade for calling a loaded plugin's functions as if they
-were local, transparently forwarding attribute access to gRPC calls.
-"""
+"""Proxy interface for forwarding communication between the engine and plugin modules."""
 # TODO add doc
 import json
 import logging

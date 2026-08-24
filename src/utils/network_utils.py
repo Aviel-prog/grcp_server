@@ -1,4 +1,4 @@
-"""Low-level networking helpers used when spawning plugin processes."""
+"""Utility functions for network calls, socket handling, and gRPC channel setups."""
 
 import socket
 
