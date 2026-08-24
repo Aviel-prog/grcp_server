@@ -1,41 +1,43 @@
 import inspect
-from email.policy import strict
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import Field
+
+from src.utils.plugin_common import StrictBaseModel
 
 
 # ==========================================
 # Pydantic Schemas for Validation
 # ==========================================
 
-class PingOutput(BaseModel, strict):
+
+class PingOutput(StrictBaseModel):
     response: str = Field()
 
 
-class StringInput(BaseModel):
+class StringInput(StrictBaseModel):
     text: str = Field(min_length=1)
 
 
-class SubstringInput(BaseModel):
+class SubstringInput(StrictBaseModel):
     text: str = Field(min_length=1)
     sub: str = Field(min_length=1)
 
 
-class StringOutput(BaseModel):
+class StringOutput(StrictBaseModel):
     result: str
 
 
-class LengthOutput(BaseModel):
+class LengthOutput(StrictBaseModel):
     length: int = Field(ge=0)
 
 
-class ContainsOutput(BaseModel):
+class ContainsOutput(StrictBaseModel):
     contains: bool
 
 
-class ManifestOutput(BaseModel):
+class ManifestOutput(StrictBaseModel):
     plugin_name: str = Field(description="Name of the plugin")
     functions: dict[str, dict[str, Any]] = Field(description="Map of function names to parameter types")
 

@@ -2,37 +2,41 @@ import inspect
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
+from src.utils.plugin_common import StrictBaseModel
 
 
 # ==========================================
 # Pydantic Schemas for Inputs
 # ==========================================
-class PingOutput(BaseModel):
+
+
+
+class PingOutput(StrictBaseModel):
     response: str = Field()
 
 
-class AddInput(BaseModel):
+class AddInput(StrictBaseModel):
     a: int | float = Field(description="First operand")
     b: int | float = Field(description="Second operand")
 
 
-class SubInput(BaseModel):
+class SubInput(StrictBaseModel):
     a: int | float = Field(description="First operand")
     b: int | float = Field(description="Second operand")
 
 
-class MultiplyInput(BaseModel):
+class MultiplyInput(StrictBaseModel):
     a: int | float = Field(description="First operand")
     b: int | float = Field(description="Second operand")
 
 
-class PowInput(BaseModel):
+class PowInput(StrictBaseModel):
     a: int | float = Field(description="Base")
     b: int | float = Field(description="Exponent")
 
 
-class DivInput(BaseModel):
+class DivInput(StrictBaseModel):
     a: int | float = Field(description="Numerator")
     b: int | float = Field(description="Denominator")
 
