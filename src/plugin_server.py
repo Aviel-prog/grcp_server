@@ -9,7 +9,7 @@ from concurrent import futures
 import grpc
 
 from src.generated import engine_pb2, engine_pb2_grpc
-from src.utils.plugin_engine import PluginLoadError, build_registered_functions, import_plugin_manager
+from src.utils.engine_utils import PluginLoadError, build_registered_functions, import_plugin_manager
 from src.utils.proto_utils import argument_to_value, build_response
 
 logger = logging.getLogger(__name__)

@@ -2,19 +2,13 @@ import inspect
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel, Field, field_validator, ConfigDict
-from src.utils.plugin_common import StrictBaseModel
+from pydantic import Field, field_validator
+from src.plugins.common.plugin_common import StrictBaseModel, BasePlugin
 
 
 # ==========================================
 # Pydantic Schemas for Inputs
 # ==========================================
-
-
-
-class PingOutput(StrictBaseModel):
-    response: str = Field()
-
 
 class AddInput(StrictBaseModel):
     a: int | float = Field(description="First operand")
@@ -51,11 +45,11 @@ class DivInput(StrictBaseModel):
 # ==========================================
 # Pydantic Schemas for Outputs
 # ==========================================
-class NumberOutput(BaseModel):
+class NumberOutput(StrictBaseModel):
     result: int | float = Field(description="Resulting numeric value")
 
 
-class ManifestOutput(BaseModel):
+class ManifestOutput(StrictBaseModel):
     plugin_name: str = Field(description="Name of the plugin")
     functions: dict[str, dict[str, Any]] = Field(description="Map of function names to parameter types")
 
@@ -63,7 +57,7 @@ class ManifestOutput(BaseModel):
 # ==========================================
 # Plugin Manager Implementation
 # ==========================================
-class PluginManager:
+class PluginManager(BasePlugin):
     """Math operations plugin manager with static methods and Pydantic input/output validation."""
 
     def get_manifest(self) -> str:
@@ -100,11 +94,6 @@ class PluginManager:
             functions=functions_manifest,
         )
         return validated_output.model_dump_json(indent=2)
-
-    @staticmethod
-    def ping() -> str:
-        """Health check function that returns validated 'pong'."""
-        return PingOutput(response="pong").response
 
     @staticmethod
     def add(a: int | float, b: int | float) -> int | float:

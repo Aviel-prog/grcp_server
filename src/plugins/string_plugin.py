@@ -4,16 +4,12 @@ from typing import Any
 
 from pydantic import Field
 
-from src.utils.plugin_common import StrictBaseModel
+from src.plugins.common.plugin_common import StrictBaseModel, BasePlugin
 
 
 # ==========================================
 # Pydantic Schemas for Validation
 # ==========================================
-
-
-class PingOutput(StrictBaseModel):
-    response: str = Field()
 
 
 class StringInput(StrictBaseModel):
@@ -46,7 +42,7 @@ class ManifestOutput(StrictBaseModel):
 # Plugin Implementation
 # ==========================================
 
-class PluginManager:
+class PluginManager(BasePlugin):
     """String operations plugin manager with static methods and self-manifest generation."""
 
     def get_manifest(self) -> str:
@@ -83,11 +79,6 @@ class PluginManager:
             functions=functions_manifest,
         )
         return validated_manifest.model_dump_json(indent=1)
-
-    @staticmethod
-    def ping() -> str:
-        """Health check function that returns validated 'pong'."""
-        return PingOutput(response="pong").response
 
     @staticmethod
     def lowercase(text: str) -> str:

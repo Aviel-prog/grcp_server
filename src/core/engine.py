@@ -16,7 +16,7 @@ from typing import Iterator
 
 import grpc
 
-from src.core.proxy import ProxyWrapper, _Proxy
+from src.core.proxy import Proxy
 from src.generated import engine_pb2, engine_pb2_grpc
 from src.plugin_server import run_plugin_server
 from src.utils.network_utils import find_free_port
@@ -24,7 +24,7 @@ from src.utils.network_utils import find_free_port
 logger = logging.getLogger(__name__)
 
 
-def _ensure_project_root_importable() -> None:
+def _ensure_project_root_importable() -> None:  # TODO move to main.py
     """`multiprocessing` on Windows/macOS ('spawn' start method) re-imports
     this module from scratch inside the child process, which does not
     inherit the parent's `sys.path`. The project root must be importable
@@ -58,7 +58,7 @@ class Engine:
 
     @classmethod
     @contextmanager
-    def load_plugin(cls, plugin_filename: str) -> Iterator[ProxyWrapper]:
+    def load_plugin(cls, plugin_filename: str) -> Iterator[Proxy]:
         """Loads `plugin_filename` (starting its process if it isn't
         already running) and yields a proxy for calling its functions.
 
@@ -72,7 +72,7 @@ class Engine:
             already_running = plugin_filename in cls._loaded
             info = cls._loaded.get(plugin_filename) or cls._start_plugin_process(plugin_filename)
 
-        wrapper = ProxyWrapper(_Proxy(info["host"], info["port"]))
+        wrapper = Proxy(info["host"], info["port"])
         try:
             yield wrapper
         finally:
@@ -101,7 +101,7 @@ class Engine:
         """
         port = find_free_port()
 
-        process = multiprocessing.Process( # plug_server can be on k9s
+        process = multiprocessing.Process(  # plug_server can be on k9s
             target=run_plugin_server,
             args=(plugin_filename, cls.HOST, port),
             name=f"plugin:{plugin_filename}",
