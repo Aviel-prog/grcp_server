@@ -40,7 +40,7 @@ def import_plugin_manager(plugin_filename: str) -> type:
 
 def build_registered_functions(plugin_instance) -> dict:
     """Collects every public callable exposed by the plugin's class -
-    regular methods and staticmethods alike - bound through `plugin_instance`
+    regular methods and static methods alike - bound through `plugin_instance`
     so both kinds are invoked identically as `func(*args)` by the caller.
     """
     plugin_cls = type(plugin_instance)
