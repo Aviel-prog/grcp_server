@@ -15,10 +15,16 @@ def configure_logging() -> None:
 def main() -> None:
     configure_logging()
 
-    with Engine.load_plugin("math_plugin") as math_plugin:
+    with Engine.load_plugin("string_plugin") as math_plugin:
+        print(math_plugin.lowercase("ALEMU"))
+        print(math_plugin.ping())
         print(math_plugin.get_manifest())
+
+    with Engine.load_plugin("math_plugin") as math_plugin:
         print(math_plugin.add(1, 2))
-        print(math_plugin.sub(1, 2))
+        print(math_plugin.sub(1, 2551))
+        print(math_plugin.get_manifest())
+        print(math_plugin.ping())
 
 
 
