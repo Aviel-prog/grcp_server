@@ -3,6 +3,7 @@
 import json
 import logging
 from typing import Any
+import builtins
 
 import grpc
 
@@ -68,8 +69,23 @@ class Proxy:
             logger.error("Could not reach plugin server to resolve '%s'", function_name)
             return False
 
-    def _validate_args(self, function_name: str, *args: Any) -> None:
-        return True  # TODO
+    def _validate_args(self, function_name: str, *args: Any) -> bool:
+        """Validates that the number and types of the given args match the manifest."""
+        params = self.manifest.get("functions", {}).get(function_name, {})
+
+        if len(args) != len(params):
+            return False
+
+        for arg, type_name in zip(args, params.values()):
+            expected_types = tuple(
+                getattr(builtins, t.strip(), None) for t in type_name.split("|")
+            )
+            expected_types = tuple(t for t in expected_types if isinstance(t, type))
+
+            if expected_types and not isinstance(arg, expected_types):
+                return False
+
+        return True
 
     def _call(self, function_name: str, *args: Any) -> Any:
         """Invokes `function_name` on the remote plugin and returns its
