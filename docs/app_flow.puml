@@ -1,0 +1,77 @@
+@startuml src
+
+package "core" {
+  class Engine {
+    + {static} load_plugin(plugin_filename): Proxy
+    + {static} unload_plugin(plugin_filename): void
+    - {static} _start_plugin_process(plugin_filename): dict
+    - {static} _wait_until_ready(host, port): void
+  }
+
+  class Proxy {
+    + manifest: dict
+    + close(): void
+    - _validate_args(function_name, *args): bool
+    - _call(function_name, *args): Any
+  }
+
+  class PluginStartupError
+  class PluginCallError
+}
+
+package "plugin_server (separate process)" {
+  class PluginServicer {
+    + GetManifest(request): response
+    + FuncCall(request): response
+  }
+
+  class run_plugin_server <<function>> {
+    + run_plugin_server(plugin_filename, host, port): void
+  }
+}
+
+package "utils" {
+  class engine_utils <<module>> {
+    + import_plugin_manager(plugin_filename): PluginManager
+    + build_registered_functions(plugin_instance): dict
+  }
+  class PluginLoadError
+}
+
+package "plugins" {
+  abstract class BasePlugin {
+    + get_manifest(): str
+    + {static} ping(): str
+  }
+
+  class PluginManager <<per-plugin, e.g. math_plugin>> {
+    + get_manifest(): str
+    + <plugin functions...>
+  }
+
+  BasePlugin <|-- PluginManager
+}
+
+' relationships between the parts
+Engine ..> Proxy : creates
+Engine ..> PluginStartupError : raises
+Engine ..> run_plugin_server : spawns as new process
+
+run_plugin_server ..> engine_utils : loads plugin via
+run_plugin_server ..> PluginServicer : starts gRPC service
+
+engine_utils ..> PluginManager : imports
+engine_utils ..> PluginLoadError : raises
+
+PluginServicer --> PluginManager : delegates calls to
+
+Proxy ..> PluginCallError : raises
+Proxy ..> PluginServicer : calls remotely (gRPC)
+
+note bottom of Engine
+  Engine (client process) and the plugin
+  (PluginServicer, in its own process)
+  communicate only through gRPC via Proxy.
+end note
+
+@enduml
